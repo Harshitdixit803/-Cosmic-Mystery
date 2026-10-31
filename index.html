@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>COSMIC DROP 🌌 — Addictive Gravity Merge</title>
+  <title>COSMIC MYSTERY 🌌 — Physics Merge Game</title>
   <meta name="description" content="One-thumb addictive cosmic physics merge game. Drop glowing celestial orbs, build insane combo chains, and reach the Singularity!">
   <meta name="theme-color" content="#0a0a16">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -32,14 +32,21 @@
     html, body {
       width: 100%;
       height: 100%;
+      height: 100dvh;
+      min-height: -webkit-fill-available;
       overflow: hidden;
       background-color: var(--bg-dark);
       font-family: var(--font);
       color: var(--text-main);
       touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
       display: flex;
       justify-content: center;
       align-items: center;
+      position: fixed;
+      inset: 0;
     }
 
     /* Ambient animated cosmic background */
@@ -69,28 +76,30 @@
       100% { transform: scale(0.95) translate(-15px, 25px); opacity: 0.2; }
     }
 
-    /* Main Container */
+    /* Main Container with Safe Area Insets for Mobile */
     #game-container {
       position: relative;
       width: 100%;
       height: 100%;
+      height: 100dvh;
       max-width: 440px;
-      max-height: 860px;
       display: flex;
       flex-direction: column;
       z-index: 1;
-      box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), 0 0 1px 1px rgba(255, 255, 255, 0.08);
-      background: rgba(10, 10, 24, 0.6);
+      background: rgba(10, 10, 24, 0.7);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
-      border-radius: 0px;
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
     }
 
-    @media (min-width: 480px) and (min-height: 700px) {
+    @media (min-width: 480px) and (min-height: 640px) {
       #game-container {
         height: 94vh;
+        max-height: 880px;
         border-radius: 28px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), 0 0 1px 1px rgba(255, 255, 255, 0.08);
         overflow: hidden;
       }
     }
@@ -222,6 +231,8 @@
       width: 100%;
       overflow: hidden;
       cursor: pointer;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
     #game-canvas {
@@ -565,7 +576,7 @@
     <!-- Tutorial / Info Screen -->
     <div class="overlay-screen" id="help-screen">
       <div class="modal-card">
-        <h2 class="modal-title">COSMIC DROP 🌌</h2>
+        <h2 class="modal-title">COSMIC MYSTERY 🌌</h2>
         <p class="modal-subtitle">Addictive Gravity Merge</p>
 
         <div style="text-align: left; font-size: 13px; line-height: 1.6; color: #cbd5e1; display: flex; flex-direction: column; gap: 8px;">
@@ -584,7 +595,7 @@
 
   <script>
     /**
-     * COSMIC DROP — Production-Ready Single File Mini-Game
+     * COSMIC MYSTERY — Production-Ready Single File Mini-Game
      * Architecture:
      * 1. AudioSynthesizer: Procedural Web Audio API sound effects (no external assets)
      * 2. PhysicsEngine: Circle-circle 2D collision, restitution, squash/stretch, friction
@@ -997,11 +1008,14 @@
           this.shareScore();
         });
 
-        // Pointer Controls (Mobile Touch + Mouse)
+        // Robust Touch & Pointer Controls with Target Tracking
         const onPointerDown = (e) => {
           if (this.isGameOver || this.helpScreen.classList.contains('active')) return;
           this.sound.init();
           this.isAiming = true;
+          if (this.wrap.setPointerCapture && e.pointerId !== undefined) {
+            try { this.wrap.setPointerCapture(e.pointerId); } catch(err) {}
+          }
           this.updateAimPosition(e);
           if (this.tutorialHint) {
             this.tutorialHint.style.display = 'none';
@@ -1016,13 +1030,18 @@
         const onPointerUp = (e) => {
           if (!this.isAiming) return;
           this.isAiming = false;
+          if (this.wrap.releasePointerCapture && e.pointerId !== undefined) {
+            try { this.wrap.releasePointerCapture(e.pointerId); } catch(err) {}
+          }
           this.dropCurrentOrb();
         };
 
-        this.wrap.addEventListener('pointerdown', onPointerDown);
-        window.addEventListener('pointermove', onPointerMove);
+        this.wrap.addEventListener('pointerdown', onPointerDown, { passive: false });
+        this.wrap.addEventListener('pointermove', onPointerMove, { passive: true });
+        this.wrap.addEventListener('pointerup', onPointerUp);
+        this.wrap.addEventListener('pointercancel', () => { this.isAiming = false; });
+        // Fallback for document-level pointer release
         window.addEventListener('pointerup', onPointerUp);
-        window.addEventListener('pointercancel', () => { this.isAiming = false; });
 
         // Keyboard Controls
         window.addEventListener('keydown', (e) => {
@@ -1103,7 +1122,9 @@
 
       renderNextOrbPreview() {
         const ctx = this.nextCtx;
-        ctx.clearRect(0, 0, 52, 52);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, this.nextCanvas.width, this.nextCanvas.height);
+        ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
         const config = ORB_TIERS[this.nextTier];
         const previewRadius = Math.min(20, config.radius * 0.55);
 
@@ -1497,6 +1518,11 @@
       // --- RENDERING PIPELINE ---
       render() {
         const ctx = this.ctx;
+        // Pixel-perfect High DPI clear
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+
         ctx.save();
 
         // Screen Shake offset
@@ -1505,8 +1531,6 @@
           const dy = (Math.random() - 0.5) * this.shakeIntensity * 2;
           ctx.translate(dx, dy);
         }
-
-        ctx.clearRect(0, 0, this.width, this.height);
 
         // 1. Draw Jar / Container Guide Grid
         this.renderContainerAesthetics(ctx);
@@ -1675,7 +1699,7 @@
         const emojiGrid = this.generateEmojiGrid();
 
         const shareText = 
-`🌌 COSMIC DROP
+`🌌 COSMIC MYSTERY
 🏆 Score: ${this.score.toLocaleString()}
 ⭐ Peak Core: ${tierConfig.icon} ${tierConfig.name}
 🔥 Streak: ${this.dailyStreak} Day${this.dailyStreak > 1 ? 's' : ''}
@@ -1688,7 +1712,7 @@ Play free in browser: ${window.location.href}`;
         if (navigator.share) {
           try {
             await navigator.share({
-              title: 'COSMIC DROP 🌌 Addictive Gravity Merge',
+              title: 'COSMIC MYSTERY 🌌 Addictive Gravity Merge',
               text: shareText
             });
             return;
