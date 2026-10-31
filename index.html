@@ -1,0 +1,1753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>COSMIC DROP 🌌 — Addictive Gravity Merge</title>
+  <meta name="description" content="One-thumb addictive cosmic physics merge game. Drop glowing celestial orbs, build insane combo chains, and reach the Singularity!">
+  <meta name="theme-color" content="#0a0a16">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <style>
+    :root {
+      --bg-dark: #070712;
+      --card-bg: rgba(20, 20, 42, 0.75);
+      --accent: #a855f7;
+      --accent-glow: rgba(168, 85, 247, 0.4);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --danger: #ef4444;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-dark);
+      font-family: var(--font);
+      color: var(--text-main);
+      touch-action: none;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Ambient animated cosmic background */
+    #ambient-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background: radial-gradient(circle at 50% 25%, #1e1138 0%, #0b0b18 55%, #05050c 100%);
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .ambient-glow {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.25;
+      animation: floatPulse 12s ease-in-out infinite alternate;
+      pointer-events: none;
+    }
+    .glow-1 { width: 350px; height: 350px; background: #6366f1; top: 10%; left: 15%; }
+    .glow-2 { width: 400px; height: 400px; background: #ec4899; bottom: 15%; right: 10%; animation-delay: -5s; }
+
+    @keyframes floatPulse {
+      0% { transform: scale(1) translate(0, 0); opacity: 0.2; }
+      50% { transform: scale(1.15) translate(20px, -20px); opacity: 0.35; }
+      100% { transform: scale(0.95) translate(-15px, 25px); opacity: 0.2; }
+    }
+
+    /* Main Container */
+    #game-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      max-width: 440px;
+      max-height: 860px;
+      display: flex;
+      flex-direction: column;
+      z-index: 1;
+      box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), 0 0 1px 1px rgba(255, 255, 255, 0.08);
+      background: rgba(10, 10, 24, 0.6);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 0px;
+    }
+
+    @media (min-width: 480px) and (min-height: 700px) {
+      #game-container {
+        height: 94vh;
+        border-radius: 28px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        overflow: hidden;
+      }
+    }
+
+    /* Top Navigation / Stats Bar */
+    #ui-header {
+      flex: 0 0 auto;
+      padding: 12px 16px 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      z-index: 10;
+    }
+
+    .stat-pill {
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 14px;
+      padding: 6px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 72px;
+      backdrop-filter: blur(8px);
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+
+    .stat-pill.bounce {
+      transform: scale(1.08);
+      border-color: #a855f7;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .stat-val {
+      font-size: 18px;
+      font-weight: 800;
+      color: #fff;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.1;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .icon-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background 0.15s, transform 0.1s;
+      outline: none;
+    }
+
+    .icon-btn:active {
+      transform: scale(0.92);
+      background: rgba(255, 255, 255, 0.18);
+    }
+
+    /* Next Orb & Tier Tracker */
+    #sub-header {
+      flex: 0 0 auto;
+      padding: 2px 18px 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .next-preview-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: 20px;
+      padding: 4px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+
+    .next-preview-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    #next-orb-canvas {
+      width: 26px;
+      height: 26px;
+      display: block;
+    }
+
+    .streak-badge {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(239, 68, 68, 0.2));
+      border: 1px solid rgba(249, 115, 22, 0.4);
+      color: #fb923c;
+      padding: 4px 10px;
+      border-radius: 14px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    /* Canvas Arena */
+    #canvas-wrap {
+      position: relative;
+      flex: 1 1 0;
+      width: 100%;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    #game-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Danger Line Pulsing Alert */
+    #danger-indicator {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 2px;
+      pointer-events: none;
+      z-index: 5;
+      display: none;
+      background: linear-gradient(90deg, transparent, var(--danger), transparent);
+      box-shadow: 0 0 12px var(--danger);
+      animation: dangerPulse 0.5s ease-in-out infinite alternate;
+    }
+
+    @keyframes dangerPulse {
+      0% { opacity: 0.3; transform: scaleY(1); }
+      100% { opacity: 1; transform: scaleY(2.5); }
+    }
+
+    /* Overlays (Game Over, How-to-play) */
+    .overlay-screen {
+      position: absolute;
+      inset: 0;
+      background: rgba(8, 8, 20, 0.88);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      transform: scale(0.96);
+    }
+
+    .overlay-screen.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: scale(1);
+    }
+
+    .modal-card {
+      width: 100%;
+      max-width: 340px;
+      background: linear-gradient(180deg, rgba(30, 27, 56, 0.85) 0%, rgba(18, 16, 38, 0.95) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 24px;
+      padding: 24px 20px;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 30px var(--accent-glow);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal-title {
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .modal-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: -8px;
+    }
+
+    .score-breakdown {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .breakdown-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .breakdown-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .breakdown-val {
+      font-size: 20px;
+      font-weight: 900;
+      color: #fff;
+    }
+
+    .highest-orb-pill {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 14px;
+      padding: 8px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .highest-orb-pill span {
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .primary-btn {
+      width: 100%;
+      padding: 14px 20px;
+      border-radius: 16px;
+      border: none;
+      background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 8px 20px rgba(168, 85, 247, 0.4);
+      transition: transform 0.15s, filter 0.15s;
+    }
+
+    .primary-btn:active {
+      transform: scale(0.96);
+      filter: brightness(1.15);
+    }
+
+    .secondary-btn {
+      width: 100%;
+      padding: 12px 18px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    .secondary-btn:active {
+      background: rgba(255, 255, 255, 0.15);
+      transform: scale(0.97);
+    }
+
+    /* Toast Notification */
+    #toast {
+      position: absolute;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-30px);
+      background: #10b981;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 30px;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+    }
+
+    #toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* Tutorial Hand Hint (First Run) */
+    #tutorial-hint {
+      position: absolute;
+      bottom: 22%;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+      z-index: 15;
+      animation: bouncePulse 2s infinite ease-in-out;
+      opacity: 0.85;
+    }
+
+    .hint-text {
+      font-size: 12px;
+      font-weight: 700;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(4px);
+    }
+
+    @keyframes bouncePulse {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(-10px); }
+    }
+
+    /* Evolution Tier Modal Strip */
+    .tier-evolution-list {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 6px;
+      padding: 4px 0;
+    }
+
+    .tier-chip {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    }
+  </style>
+</head>
+<body>
+  <div id="ambient-bg">
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+  </div>
+
+  <div id="game-container">
+    <!-- Header -->
+    <header id="ui-header">
+      <div class="stat-pill" id="score-card">
+        <span class="stat-label">Score</span>
+        <span class="stat-val" id="score-display">0</span>
+      </div>
+
+      <div class="stat-pill">
+        <span class="stat-label">Best</span>
+        <span class="stat-val" id="best-display">0</span>
+      </div>
+
+      <div class="header-actions">
+        <button class="icon-btn" id="help-btn" title="How to Play" aria-label="Help">❓</button>
+        <button class="icon-btn" id="sound-btn" title="Toggle Sound" aria-label="Sound">🔊</button>
+      </div>
+    </header>
+
+    <!-- Sub Header: Next Orb & Streak -->
+    <div id="sub-header">
+      <div class="next-preview-wrap">
+        <span class="next-preview-label">Next</span>
+        <canvas id="next-orb-canvas" width="52" height="52"></canvas>
+      </div>
+      <div class="streak-badge" id="streak-pill">
+        <span>🔥</span>
+        <span id="streak-display">1 Day Streak</span>
+      </div>
+    </div>
+
+    <!-- Arena -->
+    <div id="canvas-wrap">
+      <canvas id="game-canvas"></canvas>
+      <div id="danger-indicator"></div>
+
+      <div id="tutorial-hint">
+        <span style="font-size: 24px;">👆</span>
+        <div class="hint-text">Drag to aim • Release to drop</div>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast">Copied to Clipboard! 📋</div>
+
+    <!-- Game Over Screen -->
+    <div class="overlay-screen" id="game-over-screen">
+      <div class="modal-card">
+        <div>
+          <h2 class="modal-title">SUPERNOVA! 💥</h2>
+          <p class="modal-subtitle">Container overflowed</p>
+        </div>
+
+        <div class="score-breakdown">
+          <div class="breakdown-item">
+            <span class="breakdown-label">Final Score</span>
+            <span class="breakdown-val" id="final-score-val">0</span>
+          </div>
+          <div class="breakdown-item">
+            <span class="breakdown-label">Max Combo</span>
+            <span class="breakdown-val" id="final-combo-val">x0</span>
+          </div>
+        </div>
+
+        <div class="highest-orb-pill">
+          <span style="color: var(--text-muted);">Highest Core:</span>
+          <span id="highest-tier-icon">⭐</span>
+          <span id="highest-tier-name">Supernova</span>
+        </div>
+
+        <button class="primary-btn" id="play-again-btn">
+          <span>🔄 PLAY AGAIN</span>
+        </button>
+
+        <button class="secondary-btn" id="share-btn">
+          <span>📤 SHARE SCORE</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Tutorial / Info Screen -->
+    <div class="overlay-screen" id="help-screen">
+      <div class="modal-card">
+        <h2 class="modal-title">COSMIC DROP 🌌</h2>
+        <p class="modal-subtitle">Addictive Gravity Merge</p>
+
+        <div style="text-align: left; font-size: 13px; line-height: 1.6; color: #cbd5e1; display: flex; flex-direction: column; gap: 8px;">
+          <p>🎯 <b>Drag & Drop:</b> Move thumb to position the celestial core and release to drop.</p>
+          <p>💥 <b>Merge & Fuse:</b> Identical cores fuse into larger, higher-value cosmic entities!</p>
+          <p>⚡ <b>Chains & Combos:</b> Merges trigger shockwaves and chain reactions for massive score multipliers.</p>
+          <p>⚠️ <b>Danger Line:</b> Don't let resting orbs breach the top warning line for more than 3 seconds!</p>
+        </div>
+
+        <div class="tier-evolution-list" id="tier-preview-list"></div>
+
+        <button class="primary-btn" id="close-help-btn">GOT IT, LET'S PLAY</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * COSMIC DROP — Production-Ready Single File Mini-Game
+     * Architecture:
+     * 1. AudioSynthesizer: Procedural Web Audio API sound effects (no external assets)
+     * 2. PhysicsEngine: Circle-circle 2D collision, restitution, squash/stretch, friction
+     * 3. Visuals & Juice: Particles, shockwaves, floating combat text, screen shake
+     * 4. State & Persistence: LocalStorage streaks, High Scores, Web Share API
+     */
+
+    // --- SOUND SYNTHESIZER (Web Audio API) ---
+    class SoundFX {
+      constructor() {
+        this.ctx = null;
+        this.muted = localStorage.getItem('cosmic_muted') === 'true';
+        this.pentatonic = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25, 783.99, 880.00, 1046.50];
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) {
+            this.ctx = new AudioCtx();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      toggleMute() {
+        this.muted = !this.muted;
+        localStorage.setItem('cosmic_muted', this.muted);
+        return this.muted;
+      }
+
+      // Short tactile swoosh on drop
+      playDrop() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(450, now);
+        osc.frequency.exponentialRampToValueAtTime(140, now + 0.08);
+
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.08);
+      }
+
+      // Soft rubbery thud on bounce
+      playBounce(velocityMagnitude) {
+        if (this.muted || !this.ctx) return;
+        const volume = Math.min(0.25, Math.max(0.03, velocityMagnitude * 0.025));
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(110, now);
+        osc.frequency.exponentialRampToValueAtTime(45, now + 0.06);
+
+        gain.gain.setValueAtTime(volume, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.06);
+      }
+
+      // Ascending crystalline chime with harmonics on merge
+      playMerge(tierIndex, comboCount = 0) {
+        if (this.muted || !this.ctx) return;
+        const noteIndex = Math.min(this.pentatonic.length - 1, tierIndex + comboCount);
+        const baseFreq = this.pentatonic[noteIndex];
+        const now = this.ctx.currentTime;
+
+        // Carrier oscillator
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(baseFreq, now);
+        osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.05, now + 0.22);
+
+        // Overtone shimmer
+        const overtone = this.ctx.createOscillator();
+        const overGain = this.ctx.createGain();
+        overtone.type = 'triangle';
+        overtone.frequency.setValueAtTime(baseFreq * 2.01, now);
+
+        const peakGain = Math.min(0.38, 0.18 + (comboCount * 0.04));
+        gain.gain.setValueAtTime(peakGain, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+
+        overGain.gain.setValueAtTime(peakGain * 0.45, now);
+        overGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+        osc.connect(gain);
+        overtone.connect(overGain);
+        gain.connect(this.ctx.destination);
+        overGain.connect(this.ctx.destination);
+
+        osc.start(now);
+        overtone.start(now);
+        osc.stop(now + 0.25);
+        overtone.stop(now + 0.25);
+
+        // Haptic feedback if supported
+        if (navigator.vibrate) {
+          navigator.vibrate(Math.min(45, 15 + comboCount * 8));
+        }
+      }
+
+      // High tier celebration chord
+      playMilestone() {
+        if (this.muted || !this.ctx) return;
+        const chords = [523.25, 659.25, 783.99, 1046.50]; // C Major arpeggio
+        chords.forEach((freq, idx) => {
+          setTimeout(() => {
+            if (!this.ctx) return;
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now);
+            gain.gain.setValueAtTime(0.18, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.4);
+          }, idx * 60);
+        });
+      }
+
+      // Heartbeat pulse when near danger line
+      playWarning() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(90, now);
+        osc.frequency.exponentialRampToValueAtTime(35, now + 0.12);
+
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.12);
+      }
+
+      // Melancholic tape stop on Game Over
+      playGameOver() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(280, now);
+        osc.frequency.exponentialRampToValueAtTime(60, now + 0.65);
+
+        gain.gain.setValueAtTime(0.22, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+
+        // Lowpass filter sweep
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1200, now);
+        filter.frequency.exponentialRampToValueAtTime(100, now + 0.65);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.7);
+
+        if (navigator.vibrate) {
+          navigator.vibrate([40, 60, 90]);
+        }
+      }
+    }
+
+    // --- CELESTIAL ORB TIERS CONFIGURATION ---
+    const ORB_TIERS = [
+      { name: 'Stardust', radius: 17, color: '#e2e8f0', glow: '#94a3b8', score: 2, icon: '⚪' },
+      { name: 'Spark',    radius: 24, color: '#38bdf8', glow: '#0284c7', score: 4, icon: '🔵' },
+      { name: 'Emerald',  radius: 32, color: '#34d399', glow: '#059669', score: 8, icon: '🟢' },
+      { name: 'Amber',    radius: 41, color: '#fbbf24', glow: '#d97706', score: 16, icon: '🟡' },
+      { name: 'Solar',    radius: 50, color: '#fb923c', glow: '#ea580c', score: 32, icon: '🟠' },
+      { name: 'Ruby',     radius: 60, color: '#f87171', glow: '#dc2626', score: 64, icon: '🔴' },
+      { name: 'Pulsar',   radius: 71, color: '#c084fc', glow: '#9333ea', score: 128, icon: '🟣' },
+      { name: 'Nebula',   radius: 82, color: '#f472b6', glow: '#db2777', score: 256, icon: '🔮' },
+      { name: 'Supernova',radius: 93, color: '#fde047', glow: '#eab308', score: 512, icon: '⭐' },
+      { name: 'Black Hole',radius: 105, color: '#818cf8', glow: '#4f46e5', score: 1024, icon: '🌀' },
+      { name: 'Singularity',radius: 118, color: '#ffffff', glow: '#ec4899', score: 2048, icon: '🌌' }
+    ];
+
+    // --- GAME ENGINE ---
+    class GameEngine {
+      constructor() {
+        this.sound = new SoundFX();
+        this.canvas = document.getElementById('game-canvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.nextCanvas = document.getElementById('next-orb-canvas');
+        this.nextCtx = this.nextCanvas.getContext('2d');
+        this.wrap = document.getElementById('canvas-wrap');
+        this.dangerLineEl = document.getElementById('danger-indicator');
+
+        // UI elements
+        this.scoreEl = document.getElementById('score-display');
+        this.bestEl = document.getElementById('best-display');
+        this.scoreCard = document.getElementById('score-card');
+        this.soundBtn = document.getElementById('sound-btn');
+        this.helpBtn = document.getElementById('help-btn');
+        this.streakEl = document.getElementById('streak-display');
+        this.toastEl = document.getElementById('toast');
+        this.tutorialHint = document.getElementById('tutorial-hint');
+
+        // Modals
+        this.gameOverScreen = document.getElementById('game-over-screen');
+        this.helpScreen = document.getElementById('help-screen');
+        this.playAgainBtn = document.getElementById('play-again-btn');
+        this.shareBtn = document.getElementById('share-btn');
+        this.closeHelpBtn = document.getElementById('close-help-btn');
+
+        // Game State
+        this.width = 0;
+        this.height = 0;
+        this.dpr = window.devicePixelRatio || 1;
+        this.score = 0;
+        this.highScore = parseInt(localStorage.getItem('cosmic_high_score') || '0', 10);
+        this.dailyStreak = 1;
+        this.maxComboThisRun = 0;
+        this.highestTierThisRun = 0;
+
+        this.orbs = [];
+        this.particles = [];
+        this.shockwaves = [];
+        this.floatingTexts = [];
+
+        // Dropper State
+        this.dropperX = 0;
+        this.currentTier = 0;
+        this.nextTier = 0;
+        this.canDrop = true;
+        this.dropCooldown = 400; // ms
+        this.lastDropTime = 0;
+        this.isAiming = false;
+        this.hasEverDropped = false;
+
+        // Danger State
+        this.dangerLineY = 0;
+        this.dangerTimer = 0;
+        this.dangerThreshold = 2.8; // seconds
+        this.lastWarningAudio = 0;
+
+        // Screen Shake
+        this.shakeTime = 0;
+        this.shakeIntensity = 0;
+
+        // Physics Constants
+        this.gravity = 0.38;
+        this.friction = 0.985;
+        this.wallBounce = 0.35;
+        this.floorBounce = 0.28;
+
+        this.isGameOver = false;
+        this.lastFrameTime = performance.now();
+
+        this.init();
+      }
+
+      init() {
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+
+        this.updateStreak();
+        this.updateSoundBtn();
+        this.initEventListeners();
+        this.populateTierPreview();
+
+        this.resetGame();
+        requestAnimationFrame((t) => this.loop(t));
+      }
+
+      updateStreak() {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const lastPlayed = localStorage.getItem('cosmic_last_played');
+        let streak = parseInt(localStorage.getItem('cosmic_streak') || '1', 10);
+
+        if (lastPlayed) {
+          const lastDate = new Date(lastPlayed);
+          const today = new Date(todayStr);
+          const diffDays = Math.round((today - lastDate) / (1000 * 60 * 60 * 24));
+
+          if (diffDays === 1) {
+            // Consecutive day
+            streak += 1;
+            localStorage.setItem('cosmic_streak', streak.toString());
+          } else if (diffDays > 1) {
+            // Missed a day
+            streak = 1;
+            localStorage.setItem('cosmic_streak', '1');
+          }
+        }
+        localStorage.setItem('cosmic_last_played', todayStr);
+        this.dailyStreak = streak;
+        this.streakEl.textContent = `${streak} Day Streak`;
+        this.bestEl.textContent = this.highScore.toLocaleString();
+      }
+
+      resize() {
+        const rect = this.wrap.getBoundingClientRect();
+        this.width = rect.width;
+        this.height = rect.height;
+
+        this.dpr = Math.min(window.devicePixelRatio || 1, 2.5); // Cap for battery & performance
+
+        this.canvas.width = Math.floor(this.width * this.dpr);
+        this.canvas.height = Math.floor(this.height * this.dpr);
+
+        // Danger line: 16% from the top
+        this.dangerLineY = Math.max(80, this.height * 0.16);
+        this.dangerLineEl.style.top = `${this.dangerLineY}px`;
+
+        if (!this.isAiming) {
+          this.dropperX = this.width / 2;
+        }
+
+        // Render preview canvas
+        this.nextCanvas.width = Math.floor(52 * this.dpr);
+        this.nextCanvas.height = Math.floor(52 * this.dpr);
+        this.renderNextOrbPreview();
+      }
+
+      resetGame() {
+        this.orbs = [];
+        this.particles = [];
+        this.shockwaves = [];
+        this.floatingTexts = [];
+        this.score = 0;
+        this.scoreEl.textContent = '0';
+        this.isGameOver = false;
+        this.canDrop = true;
+        this.dangerTimer = 0;
+        this.maxComboThisRun = 0;
+        this.highestTierThisRun = 0;
+        this.dangerLineEl.style.display = 'none';
+        this.gameOverScreen.classList.remove('active');
+
+        this.currentTier = this.getRandomSpawnTier();
+        this.nextTier = this.getRandomSpawnTier();
+        this.dropperX = this.width / 2;
+        this.renderNextOrbPreview();
+      }
+
+      getRandomSpawnTier() {
+        // Drop small early tiers (0, 1, 2, rarely 3)
+        const rand = Math.random();
+        if (rand < 0.48) return 0; // Dust
+        if (rand < 0.82) return 1; // Spark
+        if (rand < 0.96) return 2; // Emerald
+        return 3; // Amber
+      }
+
+      initEventListeners() {
+        // Audio Toggle
+        this.soundBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.sound.init();
+          const isMuted = this.sound.toggleMute();
+          this.updateSoundBtn();
+        });
+
+        // Help Modal
+        this.helpBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.sound.init();
+          this.helpScreen.classList.add('active');
+        });
+
+        this.closeHelpBtn.addEventListener('click', () => {
+          this.helpScreen.classList.remove('active');
+        });
+
+        // Play Again & Share
+        this.playAgainBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.sound.init();
+          this.sound.playDrop();
+          this.resetGame();
+        });
+
+        this.shareBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.shareScore();
+        });
+
+        // Pointer Controls (Mobile Touch + Mouse)
+        const onPointerDown = (e) => {
+          if (this.isGameOver || this.helpScreen.classList.contains('active')) return;
+          this.sound.init();
+          this.isAiming = true;
+          this.updateAimPosition(e);
+          if (this.tutorialHint) {
+            this.tutorialHint.style.display = 'none';
+          }
+        };
+
+        const onPointerMove = (e) => {
+          if (!this.isAiming) return;
+          this.updateAimPosition(e);
+        };
+
+        const onPointerUp = (e) => {
+          if (!this.isAiming) return;
+          this.isAiming = false;
+          this.dropCurrentOrb();
+        };
+
+        this.wrap.addEventListener('pointerdown', onPointerDown);
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+        window.addEventListener('pointercancel', () => { this.isAiming = false; });
+
+        // Keyboard Controls
+        window.addEventListener('keydown', (e) => {
+          if (e.code === 'KeyM') {
+            this.sound.toggleMute();
+            this.updateSoundBtn();
+            return;
+          }
+          if (this.isGameOver) {
+            if (e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyR') {
+              this.sound.init();
+              this.resetGame();
+            }
+            return;
+          }
+          if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+            this.dropperX = Math.max(ORB_TIERS[this.currentTier].radius + 8, this.dropperX - 25);
+          } else if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+            this.dropperX = Math.min(this.width - ORB_TIERS[this.currentTier].radius - 8, this.dropperX + 25);
+          } else if (e.code === 'Space' || e.code === 'ArrowDown' || e.code === 'KeyS') {
+            this.dropCurrentOrb();
+          }
+        });
+      }
+
+      updateSoundBtn() {
+        this.soundBtn.textContent = this.sound.muted ? '🔇' : '🔊';
+      }
+
+      updateAimPosition(e) {
+        const rect = this.wrap.getBoundingClientRect();
+        const clientX = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : this.width / 2);
+        let x = clientX - rect.left;
+
+        const r = ORB_TIERS[this.currentTier].radius;
+        // Clamp inside container walls
+        x = Math.max(r + 4, Math.min(this.width - r - 4, x));
+        this.dropperX = x;
+      }
+
+      dropCurrentOrb() {
+        const now = performance.now();
+        if (!this.canDrop || now - this.lastDropTime < this.dropCooldown) return;
+
+        this.lastDropTime = now;
+        this.canDrop = false;
+        this.hasEverDropped = true;
+
+        const tier = this.currentTier;
+        const config = ORB_TIERS[tier];
+
+        // Spawn falling orb
+        this.orbs.push({
+          x: this.dropperX,
+          y: this.dangerLineY - config.radius - 8,
+          vx: (Math.random() - 0.5) * 0.4,
+          vy: 1.5,
+          tier: tier,
+          radius: config.radius,
+          scaleX: 0.85,
+          scaleY: 1.15,
+          settled: false,
+          settledTime: 0,
+          id: Math.random()
+        });
+
+        this.sound.playDrop();
+
+        // Advance next tier
+        this.currentTier = this.nextTier;
+        this.nextTier = this.getRandomSpawnTier();
+        this.renderNextOrbPreview();
+
+        setTimeout(() => {
+          this.canDrop = true;
+        }, this.dropCooldown);
+      }
+
+      renderNextOrbPreview() {
+        const ctx = this.nextCtx;
+        ctx.clearRect(0, 0, 52, 52);
+        const config = ORB_TIERS[this.nextTier];
+        const previewRadius = Math.min(20, config.radius * 0.55);
+
+        ctx.save();
+        ctx.translate(26, 26);
+
+        // Glow
+        ctx.shadowColor = config.glow;
+        ctx.shadowBlur = 12;
+
+        // Core gradient
+        const grad = ctx.createRadialGradient(-previewRadius*0.3, -previewRadius*0.3, previewRadius*0.1, 0, 0, previewRadius);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.3, config.color);
+        grad.addColorStop(1, config.glow);
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(0, 0, previewRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      populateTierPreview() {
+        const container = document.getElementById('tier-preview-list');
+        container.innerHTML = '';
+        ORB_TIERS.forEach((tier, i) => {
+          const chip = document.createElement('div');
+          chip.className = 'tier-chip';
+          chip.style.background = `radial-gradient(circle at 35% 35%, #fff, ${tier.color} 40%, ${tier.glow} 100%)`;
+          chip.title = `${tier.name} (${tier.score} pts)`;
+          chip.textContent = i + 1;
+          container.appendChild(chip);
+        });
+      }
+
+      // --- MAIN UPDATE & PHYSICS LOOP ---
+      loop(currentTime) {
+        const dt = Math.min((currentTime - this.lastFrameTime) / 1000, 0.05); // Cap delta to prevent physics explosion
+        this.lastFrameTime = currentTime;
+
+        this.update(dt);
+        this.render();
+
+        requestAnimationFrame((t) => this.loop(t));
+      }
+
+      update(dt) {
+        if (this.shakeTime > 0) {
+          this.shakeTime -= dt;
+        }
+
+        // 1. Update Orbs (Euler Integration)
+        for (let i = 0; i < this.orbs.length; i++) {
+          const o = this.orbs[i];
+
+          // Gravity
+          o.vy += this.gravity;
+          o.x += o.vx;
+          o.y += o.vy;
+
+          // Air friction
+          o.vx *= this.friction;
+          o.vy *= this.friction;
+
+          // Wall Collisions
+          if (o.x - o.radius < 0) {
+            o.x = o.radius;
+            o.vx = -o.vx * this.wallBounce;
+            o.scaleX = 0.85;
+            o.scaleY = 1.15;
+          } else if (o.x + o.radius > this.width) {
+            o.x = this.width - o.radius;
+            o.vx = -o.vx * this.wallBounce;
+            o.scaleX = 0.85;
+            o.scaleY = 1.15;
+          }
+
+          // Floor Collision
+          if (o.y + o.radius > this.height) {
+            o.y = this.height - o.radius;
+            if (Math.abs(o.vy) > 1.2) {
+              this.sound.playBounce(Math.abs(o.vy));
+              o.scaleX = 1.25;
+              o.scaleY = 0.75;
+            }
+            o.vy = -o.vy * this.floorBounce;
+            o.vx *= 0.92; // Floor rolling friction
+            if (Math.abs(o.vy) < 0.25) o.vy = 0;
+          }
+
+          // Ease squash/stretch back to 1.0
+          o.scaleX += (1 - o.scaleX) * 0.12;
+          o.scaleY += (1 - o.scaleY) * 0.12;
+        }
+
+        // 2. Circle-to-Circle Collision & Merging
+        this.resolveCollisions();
+
+        // 3. Danger Overflow Detection
+        this.checkDangerState(dt);
+
+        // 4. Update Particles
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+          const p = this.particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += p.gravity || 0.1;
+          p.alpha -= p.decay * (dt * 60);
+          p.size *= 0.98;
+          if (p.alpha <= 0.01 || p.size <= 0.4) {
+            this.particles.splice(i, 1);
+          }
+        }
+
+        // 5. Update Shockwaves
+        for (let i = this.shockwaves.length - 1; i >= 0; i--) {
+          const sw = this.shockwaves[i];
+          sw.radius += sw.speed * (dt * 60);
+          sw.alpha -= sw.decay * (dt * 60);
+          if (sw.alpha <= 0) {
+            this.shockwaves.splice(i, 1);
+          }
+        }
+
+        // 6. Update Floating Text Popups
+        for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+          const ft = this.floatingTexts[i];
+          ft.y -= ft.speed * (dt * 60);
+          ft.alpha -= ft.decay * (dt * 60);
+          ft.scale = Math.min(1.2, ft.scale + 0.03);
+          if (ft.alpha <= 0) {
+            this.floatingTexts.splice(i, 1);
+          }
+        }
+      }
+
+      resolveCollisions() {
+        const len = this.orbs.length;
+        let mergeOccurred = false;
+
+        // Multiple iterations for rigid circle solver stability
+        const iterations = 6;
+        for (let iter = 0; iter < iterations; iter++) {
+          for (let i = 0; i < len; i++) {
+            for (let j = i + 1; j < len; j++) {
+              const o1 = this.orbs[i];
+              const o2 = this.orbs[j];
+              if (!o1 || !o2) continue;
+
+              const dx = o2.x - o1.x;
+              const dy = o2.y - o1.y;
+              const distSq = dx * dx + dy * dy;
+              const minDist = o1.radius + o2.radius;
+
+              if (distSq < minDist * minDist) {
+                const dist = Math.sqrt(distSq) || 0.001;
+                const overlap = minDist - dist;
+                const nx = dx / dist;
+                const ny = dy / dist;
+
+                // Check for Merge!
+                if (iter === 0 && o1.tier === o2.tier && o1.tier < ORB_TIERS.length - 1) {
+                  this.triggerMerge(i, j, o1, o2);
+                  return; // State mutated, re-run in next frame
+                }
+
+                // Positional correction (separation)
+                const percent = 0.65; // penetration resolution
+                const slop = 0.01;
+                const separation = Math.max(overlap - slop, 0) / 2 * percent;
+                o1.x -= nx * separation;
+                o1.y -= ny * separation;
+                o2.x += nx * separation;
+                o2.y += ny * separation;
+
+                // Impulse physics
+                const kx = o1.vx - o2.vx;
+                const ky = o1.vy - o2.vy;
+                const p = 2 * (nx * kx + ny * ky) / 2; // Equal mass assumption
+
+                o1.vx -= p * nx * 0.45;
+                o1.vy -= p * ny * 0.45;
+                o2.vx += p * nx * 0.45;
+                o2.vy += p * ny * 0.45;
+
+                // Squash on hard impact
+                if (Math.abs(p) > 2.5 && iter === 0) {
+                  this.sound.playBounce(Math.abs(p));
+                  o1.scaleX = 1.15;
+                  o1.scaleY = 0.85;
+                  o2.scaleX = 1.15;
+                  o2.scaleY = 0.85;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      triggerMerge(i, j, o1, o2) {
+        const nextTier = o1.tier + 1;
+        const targetX = (o1.x + o2.x) / 2;
+        const targetY = (o1.y + o2.y) / 2;
+
+        // Remove the two orbs
+        const higherIndex = Math.max(i, j);
+        const lowerIndex = Math.min(i, j);
+        this.orbs.splice(higherIndex, 1);
+        this.orbs.splice(lowerIndex, 1);
+
+        const newConfig = ORB_TIERS[nextTier];
+        const newOrb = {
+          x: targetX,
+          y: targetY,
+          vx: (o1.vx + o2.vx) * 0.3,
+          vy: Math.min(-2.5, (o1.vy + o2.vy) * 0.4 - 1.5), // slight upward pop impulse
+          tier: nextTier,
+          radius: newConfig.radius,
+          scaleX: 1.4,
+          scaleY: 0.6,
+          settled: false,
+          settledTime: 0,
+          id: Math.random()
+        };
+        this.orbs.push(newOrb);
+
+        // Update Stats
+        const earnedScore = newConfig.score * 10;
+        this.addScore(earnedScore, targetX, targetY);
+
+        if (nextTier > this.highestTierThisRun) {
+          this.highestTierThisRun = nextTier;
+        }
+
+        // Juice Effects
+        this.triggerScreenshake(Math.min(10, 3 + nextTier * 0.8));
+        this.createMergeParticles(targetX, targetY, newConfig.color, newConfig.glow, nextTier);
+        this.createShockwave(targetX, targetY, newConfig.radius, newConfig.glow);
+
+        // Audio
+        this.sound.playMerge(nextTier);
+
+        // Supernova/Singularity special fanfare
+        if (nextTier >= 8) {
+          this.sound.playMilestone();
+          this.createConfetti(targetX, targetY);
+        }
+      }
+
+      addScore(points, x, y) {
+        this.score += points;
+        this.scoreEl.textContent = this.score.toLocaleString();
+
+        // Bounce header UI
+        this.scoreCard.classList.remove('bounce');
+        void this.scoreCard.offsetWidth; // re-flow
+        this.scoreCard.classList.add('bounce');
+
+        if (this.score > this.highScore) {
+          this.highScore = this.score;
+          this.bestEl.textContent = this.highScore.toLocaleString();
+          localStorage.setItem('cosmic_high_score', this.highScore.toString());
+        }
+
+        // Floating Text
+        this.floatingTexts.push({
+          text: `+${points}`,
+          x: x,
+          y: y - 10,
+          color: '#ffffff',
+          alpha: 1,
+          scale: 0.7,
+          speed: 1.4,
+          decay: 0.02
+        });
+      }
+
+      triggerScreenshake(intensity) {
+        this.shakeIntensity = intensity;
+        this.shakeTime = 0.22;
+      }
+
+      createMergeParticles(x, y, color, glow, tier) {
+        const count = 12 + tier * 3;
+        for (let i = 0; i < count; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 1.5 + Math.random() * (3 + tier * 0.7);
+          this.particles.push({
+            x: x,
+            y: y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            size: 3 + Math.random() * (4 + tier * 0.8),
+            color: color,
+            glow: glow,
+            alpha: 1,
+            decay: 0.025 + Math.random() * 0.02,
+            gravity: 0.05
+          });
+        }
+      }
+
+      createShockwave(x, y, radius, color) {
+        this.shockwaves.push({
+          x: x,
+          y: y,
+          radius: radius * 0.5,
+          color: color,
+          alpha: 0.85,
+          speed: 4.5,
+          decay: 0.045
+        });
+      }
+
+      createConfetti(x, y) {
+        const colors = ['#f43f5e', '#ec4899', '#8b5cf6', '#3b82f6', '#10b981', '#f59e0b'];
+        for (let i = 0; i < 40; i++) {
+          const angle = (Math.PI * 2 / 40) * i + Math.random() * 0.2;
+          const speed = 3 + Math.random() * 6;
+          this.particles.push({
+            x: x,
+            y: y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 2,
+            size: 4 + Math.random() * 5,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            alpha: 1,
+            decay: 0.015,
+            gravity: 0.12
+          });
+        }
+      }
+
+      checkDangerState(dt) {
+        if (!this.hasEverDropped || this.isGameOver) return;
+
+        let anyOrbBreaching = false;
+
+        for (let i = 0; i < this.orbs.length; i++) {
+          const o = this.orbs[i];
+          // Check if top of orb crosses above danger line AND is relatively stationary
+          if (o.y - o.radius < this.dangerLineY && Math.abs(o.vy) < 1.0) {
+            anyOrbBreaching = true;
+            break;
+          }
+        }
+
+        const now = performance.now();
+        if (anyOrbBreaching) {
+          this.dangerTimer += dt;
+          this.dangerLineEl.style.display = 'block';
+
+          // Heartbeat warning audio sound every 500ms
+          if (now - this.lastWarningAudio > 450) {
+            this.sound.playWarning();
+            this.lastWarningAudio = now;
+          }
+
+          // Trigger game over if sustained above line
+          if (this.dangerTimer >= this.dangerThreshold) {
+            this.triggerGameOver();
+          }
+        } else {
+          this.dangerTimer = Math.max(0, this.dangerTimer - dt * 2);
+          if (this.dangerTimer === 0) {
+            this.dangerLineEl.style.display = 'none';
+          }
+        }
+      }
+
+      triggerGameOver() {
+        this.isGameOver = true;
+        this.dangerLineEl.style.display = 'none';
+        this.sound.playGameOver();
+
+        // Update Game Over Modal
+        document.getElementById('final-score-val').textContent = this.score.toLocaleString();
+        document.getElementById('final-combo-val').textContent = `x${Math.max(1, this.highestTierThisRun)}`;
+
+        const highestConfig = ORB_TIERS[this.highestTierThisRun];
+        document.getElementById('highest-tier-icon').textContent = highestConfig.icon;
+        document.getElementById('highest-tier-name').textContent = highestConfig.name;
+
+        setTimeout(() => {
+          this.gameOverScreen.classList.add('active');
+        }, 120);
+      }
+
+      // --- RENDERING PIPELINE ---
+      render() {
+        const ctx = this.ctx;
+        ctx.save();
+
+        // Screen Shake offset
+        if (this.shakeTime > 0) {
+          const dx = (Math.random() - 0.5) * this.shakeIntensity * 2;
+          const dy = (Math.random() - 0.5) * this.shakeIntensity * 2;
+          ctx.translate(dx, dy);
+        }
+
+        ctx.clearRect(0, 0, this.width, this.height);
+
+        // 1. Draw Jar / Container Guide Grid
+        this.renderContainerAesthetics(ctx);
+
+        // 2. Draw Aim Trajectory & Dropper Indicator
+        if (!this.isGameOver && this.canDrop) {
+          this.renderDropperGuide(ctx);
+        }
+
+        // 3. Draw Shockwaves
+        for (let i = 0; i < this.shockwaves.length; i++) {
+          const sw = this.shockwaves[i];
+          ctx.save();
+          ctx.strokeStyle = sw.color;
+          ctx.globalAlpha = sw.alpha;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // 4. Draw Orbs with luminous squishy physics
+        for (let i = 0; i < this.orbs.length; i++) {
+          this.renderOrb(ctx, this.orbs[i]);
+        }
+
+        // 5. Draw Particles
+        for (let i = 0; i < this.particles.length; i++) {
+          const p = this.particles[i];
+          ctx.save();
+          ctx.globalAlpha = p.alpha;
+          ctx.fillStyle = p.color;
+          if (p.glow) {
+            ctx.shadowColor = p.glow;
+            ctx.shadowBlur = 8;
+          }
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, Math.max(0.5, p.size), 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // 6. Draw Floating Texts
+        for (let i = 0; i < this.floatingTexts.length; i++) {
+          const ft = this.floatingTexts[i];
+          ctx.save();
+          ctx.globalAlpha = ft.alpha;
+          ctx.font = `900 ${Math.round(18 * ft.scale)}px var(--font)`;
+          ctx.fillStyle = ft.color;
+          ctx.textAlign = 'center';
+          ctx.shadowColor = 'rgba(0,0,0,0.8)';
+          ctx.shadowBlur = 6;
+          ctx.fillText(ft.text, ft.x, ft.y);
+          ctx.restore();
+        }
+
+        ctx.restore();
+      }
+
+      renderContainerAesthetics(ctx) {
+        // Subtle wall edge glow
+        ctx.save();
+        const wallGlow = ctx.createLinearGradient(0, 0, 16, 0);
+        wallGlow.addColorStop(0, 'rgba(168, 85, 247, 0.08)');
+        wallGlow.addColorStop(1, 'transparent');
+        ctx.fillStyle = wallGlow;
+        ctx.fillRect(0, 0, 16, this.height);
+
+        const rightGlow = ctx.createLinearGradient(this.width, 0, this.width - 16, 0);
+        rightGlow.addColorStop(0, 'rgba(168, 85, 247, 0.08)');
+        rightGlow.addColorStop(1, 'transparent');
+        ctx.fillStyle = rightGlow;
+        ctx.fillRect(this.width - 16, 0, 16, this.height);
+
+        // Danger line dashed guide
+        ctx.strokeStyle = 'rgba(239, 68, 68, 0.25)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 6]);
+        ctx.beginPath();
+        ctx.moveTo(8, this.dangerLineY);
+        ctx.lineTo(this.width - 8, this.dangerLineY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+
+      renderDropperGuide(ctx) {
+        const config = ORB_TIERS[this.currentTier];
+        const y = this.dangerLineY - config.radius - 8;
+
+        ctx.save();
+        // Dotted trajectory drop line
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(this.dropperX, y + config.radius);
+        ctx.lineTo(this.dropperX, this.height - 4);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Render current orb at dropper position
+        this.renderOrb(ctx, {
+          x: this.dropperX,
+          y: y,
+          radius: config.radius,
+          tier: this.currentTier,
+          scaleX: 1,
+          scaleY: 1
+        }, true);
+
+        ctx.restore();
+      }
+
+      renderOrb(ctx, orb, isGhost = false) {
+        const config = ORB_TIERS[orb.tier];
+        const r = orb.radius;
+
+        ctx.save();
+        ctx.translate(orb.x, orb.y);
+        ctx.scale(orb.scaleX || 1, orb.scaleY || 1);
+
+        if (isGhost) {
+          ctx.globalAlpha = 0.92;
+        }
+
+        // Bloom Glow
+        ctx.shadowColor = config.glow;
+        ctx.shadowBlur = isGhost ? 10 : 16;
+
+        // Radial lighting gradient
+        const grad = ctx.createRadialGradient(-r * 0.35, -r * 0.35, r * 0.08, 0, 0, r);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.25, config.color);
+        grad.addColorStop(0.85, config.glow);
+        grad.addColorStop(1, 'rgba(10, 10, 20, 0.85)');
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Internal Glass Rim Highlight
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+        ctx.lineWidth = Math.max(1, r * 0.06);
+        ctx.beginPath();
+        ctx.arc(0, 0, r - ctx.lineWidth * 0.5, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Celestial Symbol / Tier Icon
+        if (r >= 22) {
+          ctx.font = `${Math.round(r * 0.75)}px var(--font)`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(config.icon, 0, 2);
+        }
+
+        ctx.restore();
+      }
+
+      // --- VIRAL SHARING MECHANIC ---
+      async shareScore() {
+        const tierConfig = ORB_TIERS[this.highestTierThisRun];
+        const emojiGrid = this.generateEmojiGrid();
+
+        const shareText = 
+`🌌 COSMIC DROP
+🏆 Score: ${this.score.toLocaleString()}
+⭐ Peak Core: ${tierConfig.icon} ${tierConfig.name}
+🔥 Streak: ${this.dailyStreak} Day${this.dailyStreak > 1 ? 's' : ''}
+
+${emojiGrid}
+
+Play free in browser: ${window.location.href}`;
+
+        // Attempt Web Share API (native mobile sheets)
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: 'COSMIC DROP 🌌 Addictive Gravity Merge',
+              text: shareText
+            });
+            return;
+          } catch (err) {
+            // Cancelled or unsupported, fall back to clipboard
+          }
+        }
+
+        // Clipboard Fallback
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(shareText).then(() => {
+            this.showToast('Copied to Clipboard! 📋');
+          }).catch(() => {
+            this.legacyCopyToClipboard(shareText);
+          });
+        } else {
+          this.legacyCopyToClipboard(shareText);
+        }
+      }
+
+      generateEmojiGrid() {
+        const tierEmojis = ORB_TIERS.map(t => t.icon);
+        let grid = '';
+        const reached = Math.min(tierEmojis.length, this.highestTierThisRun + 1);
+        for (let i = 0; i < reached; i++) {
+          grid += tierEmojis[i];
+        }
+        return grid;
+      }
+
+      legacyCopyToClipboard(text) {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+          document.execCommand('copy');
+          this.showToast('Copied to Clipboard! 📋');
+        } catch (err) {
+          this.showToast('Sharing not supported on this browser');
+        }
+        document.body.removeChild(textArea);
+      }
+
+      showToast(msg) {
+        this.toastEl.textContent = msg;
+        this.toastEl.classList.add('show');
+        setTimeout(() => {
+          this.toastEl.classList.remove('show');
+        }, 2200);
+      }
+    }
+
+    // Initialize Game on DOM ready
+    window.addEventListener('DOMContentLoaded', () => {
+      window.game = new GameEngine();
+    });
+  </script>
+</body>
+</html>
